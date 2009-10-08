@@ -1,26 +1,38 @@
-require 'rubygems'; require 'nokogiri'; require 'morph'
+require 'rubygems'; require 'nokogiri'; require 'cobravsmongoose'
 
 class StandardNote
-include Morph  # allows class to morph
 
-def initialize file
- doc = Nokogiri::XML.parse(File.open(file).read)
- 
- ps = doc.xpath('//w:t', {'w' => 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'})
- value = []
- ps.collect do |node|
-   label = "rawtext"
-   value << node.content
-
-   morph(label, value.join(' '))  # morph magic happening here!
+ def initialize file
+   @doc = Nokogiri::XML.parse(File.open(file).read)
  end
+ 
+ def rawtext
+  rawtext = ""
+  wordml_text_nodes = @doc.xpath('//w:t', {'w' => 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'})
+  wordml_text_node_array = []
+   wordml_text_nodes.collect do |wordml_text_node|
+   wordml_text_node_array << wordml_text_node.inner_html
+   rawtext = wordml_text_node_array.join
+  end
+ rawtext
+ end
+ 
+ def pack
+ xmlpackage_packages = @doc.xpath('//pkg:part', {'pkg' => 'http://schemas.microsoft.com/office/2006/xmlPackage'})
+ 
+ packages = []
+ xmlpackage_packages.collect do |xmlpackage_package|
+   packages << [xmlpackage_package['contentType'],xmlpackage_package['padding'],xmlpackage_package['name']]
+ end
+ packages
+ end
+ 
+ def xx
+   CobraVsMongoose.xml_to_hash(@doc)
+ end
+ 
 end
-end
+    
+sn = StandardNote.new('snep-01942.xml')
 
-def StandardNote file; StandardNote.new file; end
-
-sn = StandardNote 'snep-01942.xml'
-
-p StandardNote.morph_methods
-
-p sn.rawtext
+p sn.xx
